@@ -24,3 +24,45 @@ scrape_configs:
       - timestamp:
           source: timestamp
           format: '2006-01-02 15:04:05'
+
+      # Scope: auth
+      - match:
+          selector: '{job="fakeapp"} |~ "(?i)(logged in|session|authentication|login|token)"'
+          stages:
+            - labels:
+                scope: auth
+
+      # Scope: database
+      - match:
+          selector: '{job="fakeapp"} |~ "(?i)(database|query|connection pool|connection refused)"'
+          stages:
+            - labels:
+                scope: database
+
+      # Scope: api
+      - match:
+          selector: '{job="fakeapp"} |~ "(?i)(API|request|endpoint|rate limit)"'
+          stages:
+            - labels:
+                scope: api
+
+      # Scope: storage
+      - match:
+          selector: '{job="fakeapp"} |~ "(?i)(file|cache|disk space)"'
+          stages:
+            - labels:
+                scope: storage
+
+      # Scope: payment
+      - match:
+          selector: '{job="fakeapp"} |~ "(?i)(payment|order)"'
+          stages:
+            - labels:
+                scope: payment
+
+      # Scope: system
+      - match:
+          selector: '{job="fakeapp"} |~ "(?i)(memory|SSL|certificate|exception|shutdown)"'
+          stages:
+            - labels:
+                scope: system
