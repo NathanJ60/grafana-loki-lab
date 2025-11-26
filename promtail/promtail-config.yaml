@@ -25,44 +25,29 @@ scrape_configs:
           source: timestamp
           format: '2006-01-02 15:04:05'
 
-      # Scope: auth
-      - match:
-          selector: '{job="fakeapp"} |~ "(?i)(logged in|session|authentication|login|token)"'
-          stages:
-            - labels:
-                scope: auth
+      # Scope detection via regex on message
+      - regex:
+          source: message
+          expression: '(?i)(?P<scope_auth>logged in|session|authentication|login|token)'
+      - regex:
+          source: message
+          expression: '(?i)(?P<scope_database>database|query|connection pool|connection refused)'
+      - regex:
+          source: message
+          expression: '(?i)(?P<scope_api>API call|request processed|endpoint|rate limit)'
+      - regex:
+          source: message
+          expression: '(?i)(?P<scope_storage>file|cache|disk space)'
+      - regex:
+          source: message
+          expression: '(?i)(?P<scope_payment>payment|order)'
+      - regex:
+          source: message
+          expression: '(?i)(?P<scope_system>memory|SSL|certificate|exception|shutdown)'
 
-      # Scope: database
-      - match:
-          selector: '{job="fakeapp"} |~ "(?i)(database|query|connection pool|connection refused)"'
-          stages:
-            - labels:
-                scope: database
-
-      # Scope: api
-      - match:
-          selector: '{job="fakeapp"} |~ "(?i)(API|request|endpoint|rate limit)"'
-          stages:
-            - labels:
-                scope: api
-
-      # Scope: storage
-      - match:
-          selector: '{job="fakeapp"} |~ "(?i)(file|cache|disk space)"'
-          stages:
-            - labels:
-                scope: storage
-
-      # Scope: payment
-      - match:
-          selector: '{job="fakeapp"} |~ "(?i)(payment|order)"'
-          stages:
-            - labels:
-                scope: payment
-
-      # Scope: system
-      - match:
-          selector: '{job="fakeapp"} |~ "(?i)(memory|SSL|certificate|exception|shutdown)"'
-          stages:
-            - labels:
-                scope: system
+      # Template to set scope based on which regex matched
+      - template:
+          source: scope
+          template: '{{ if .scope_auth }}auth{{ else if .scope_database }}database{{ else if .scope_api }}api{{ else if .scope_storage }}storage{{ else if .scope_payment }}payment{{ else if .scope_system }}system{{ else }}other{{ end }}'
+      - labels:
+          scope:
