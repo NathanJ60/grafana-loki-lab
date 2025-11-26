@@ -1,39 +1,36 @@
-# Grafana Loki Lab
+# Grafana Loki Lab - Stack d'Observabilité
 
-A complete observability lab using Grafana, Loki, Promtail, and a fake log generator. Perfect for learning log aggregation and visualization.
+Projet de démonstration d'une stack d'observabilité complète avec Grafana, Loki, Promtail et un générateur de logs fake.
 
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Fake Generator │────▶│   Promtail   │────▶│    Loki     │
-│  (Python/Faker) │     │ (log shipper)│     │ (log store) │
-└─────────────────┘     └──────────────┘     └─────────────┘
-                                                    │
-                                                    ▼
-                                             ┌─────────────┐
-                                             │   Grafana   │
-                                             │   (WebUI)   │
-                                             └─────────────┘
+Fake Log Generator (Python/Faker)
+└── Écrit dans /logs/app.log
+    │
+    ▼
+Promtail (Log Shipper)
+└── Lit les logs
+└── Extrait les labels (level, scope)
+└── Envoie à Loki
+    │
+    ▼
+Loki (Log Store)
+└── Stocke et indexe par labels
+└── Expose une API de requêtes
+    │
+    ▼
+Grafana (WebUI)
+└── Visualisation
+└── Requêtes LogQL
 ```
 
-## Stack
-
-| Service | Port | Description |
-|---------|------|-------------|
-| Grafana | 3000 | Visualization & Dashboards |
-| Loki | 3100 | Log aggregation & storage |
-| Promtail | 9080 | Log collection agent |
-| Fakeapp | - | Fake log generator |
-
-## Quick Start
-
-### Prerequisites
+## Pré-requis
 
 - Docker
 - Docker Compose
 
-### Installation
+## Installation
 
 ```bash
 git clone https://github.com/NathanJ60/grafana-loki-lab.git
@@ -41,34 +38,75 @@ cd grafana-loki-lab
 docker-compose up -d
 ```
 
-### Access Grafana
+## Utilisation
 
-1. Open http://localhost:3000 (or http://YOUR_SERVER_IP:3000)
-2. Login with `admin` / `admin`
-3. Go to **Connections** → **Data Sources** → **Add data source**
-4. Select **Loki**
-5. Set URL to `http://loki:3100`
-6. Click **Save & Test**
+### Accéder à Grafana
 
-### Explore Logs
+1. Ouvrir http://localhost:3000 (ou http://IP_SERVEUR:3000)
+2. Login : `admin` / `admin`
+3. Aller dans **Connections** → **Data Sources** → **Add data source**
+4. Sélectionner **Loki**
+5. URL : `http://loki:3100`
+6. Cliquer **Save & Test**
 
-Go to **Explore** and run:
+### Explorer les logs
+
+Aller dans **Explore** et tester :
 
 ```logql
 {job="fakeapp"}
 ```
 
-Filter by log level:
-
+Filtrer par level :
 ```logql
-{job="fakeapp"} |= "ERROR"
+{job="fakeapp", level="ERROR"}
 ```
 
+Filtrer par scope :
 ```logql
-{job="fakeapp"} | logfmt | level="CRITICAL"
+{job="fakeapp", scope="auth"}
+{job="fakeapp", scope="database", level="ERROR"}
 ```
 
-## Project Structure
+## Labels disponibles
+
+Promtail extrait automatiquement ces labels de chaque ligne de log :
+
+| Label | Valeurs | Description |
+|-------|---------|-------------|
+| `job` | fakeapp | Nom du job (statique) |
+| `level` | DEBUG, INFO, WARNING, ERROR, CRITICAL | Niveau de log |
+| `scope` | auth, database, api, storage, payment, system, other | Catégorie du log |
+
+### Scope
+
+Le scope est déterminé automatiquement selon le contenu du message :
+
+- **auth** : login, session, authentication, token
+- **database** : query, connection, database
+- **api** : API call, request, endpoint, rate limit
+- **storage** : file, cache, disk
+- **payment** : payment, order
+- **system** : memory, SSL, certificate, exception
+
+## Format des logs
+
+```
+[2025-11-26 10:30:45] INFO - User john_doe logged in successfully
+[2025-11-26 10:30:46] ERROR - Failed to connect to database: Connection refused
+[2025-11-26 10:30:47] WARNING - High memory usage detected: 85%
+```
+
+Distribution des levels :
+- DEBUG: 10%
+- INFO: 50%
+- WARNING: 20%
+- ERROR: 15%
+- CRITICAL: 5%
+
+Toutes les ~100 logs, il y a 30% de chance d'un burst d'incident (20-50 ERROR/CRITICAL).
+
+## Structure du projet
 
 ```
 grafana-loki-lab/
@@ -86,42 +124,24 @@ grafana-loki-lab/
 └── README.md
 ```
 
-## Log Format
-
-The fake log generator produces logs in this format:
-
-```
-[2024-01-15 10:30:45] INFO - User john_doe logged in successfully
-[2024-01-15 10:30:46] ERROR - Failed to connect to database: Connection refused
-[2024-01-15 10:30:47] WARNING - High memory usage detected: 85%
-```
-
-Log levels distribution:
-- DEBUG: 10%
-- INFO: 50%
-- WARNING: 20%
-- ERROR: 15%
-- CRITICAL: 5%
-
-Every ~100 logs, there's a 30% chance of an "incident" burst (20-50 ERROR/CRITICAL logs).
-
-## Commands
+## Commandes utiles
 
 ```bash
-# Start the stack
+# Lancer la stack
 docker-compose up -d
 
-# View logs
+# Voir les logs de tous les services
 docker-compose logs -f
 
-# Stop the stack
+# Arrêter la stack
 docker-compose down
 
-# Rebuild after changes
+# Rebuild après modifs
 docker-compose up -d --build
 
-# View specific service logs
+# Logs d'un service spécifique
 docker-compose logs -f fakeapp
+docker-compose logs -f promtail
 docker-compose logs -f loki
 ```
 
@@ -129,25 +149,46 @@ docker-compose logs -f loki
 
 ### Loki
 
-Edit `loki/loki-config.yaml` to modify:
-- Retention period
-- Storage settings
-- Ingestion limits
+Modifier `loki/loki-config.yaml` pour :
+- Changer la rétention
+- Modifier les limites d'ingestion
+- Configurer le stockage
 
 ### Promtail
 
-Edit `promtail/promtail-config.yaml` to modify:
-- Log paths
-- Labels
-- Pipeline stages
+Modifier `promtail/promtail-config.yaml` pour :
+- Ajouter des chemins de logs
+- Créer de nouveaux labels
+- Modifier les pipeline stages
 
-### Log Generator
+### Générateur de logs
 
-Modify `generator/generate_logs.py` to:
-- Add custom log messages
-- Change log level distribution
-- Adjust incident frequency
+Modifier `generator/generate_logs.py` pour :
+- Ajouter des messages custom
+- Changer la distribution des levels
+- Modifier la fréquence des incidents
 
-## License
+## Troubleshooting
 
-MIT
+### Loki ne démarre pas
+Vérifier les permissions du volume :
+```bash
+docker-compose logs loki
+```
+
+### Les logs n'apparaissent pas dans Grafana
+1. Vérifier que Promtail lit bien les logs :
+```bash
+docker-compose logs promtail
+```
+
+2. Vérifier que Loki reçoit les logs :
+```bash
+curl http://localhost:3100/loki/api/v1/labels
+```
+
+### Voir les labels disponibles
+```bash
+curl http://localhost:3100/loki/api/v1/labels
+curl http://localhost:3100/loki/api/v1/label/scope/values
+```
