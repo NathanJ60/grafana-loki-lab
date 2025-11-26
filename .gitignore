@@ -1,0 +1,33 @@
+# Claude
+claude.md
+CLAUDE.md
+.claude.md
+.claude/
+
+# Logs
+logs/*.log
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+.venv/
+
+# Docker
+*.log
